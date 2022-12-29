@@ -3,6 +3,8 @@ import json
 from PIL import ImageTk
 from PIL import Image as PILImage
 import math
+import pathlib
+import simpleaudio
 import time
 
 class TkinterForGames:
@@ -11,8 +13,10 @@ class TkinterForGames:
         self.tkinter = tkinter
         self.window = self.tkinter.Tk()
         self.window.title("Made with tfg: Untitled")
+        self.window.geometry("600x400")
         self.canvas = self.tkinter.Canvas(self.window)
         self.canvas.pack(fill="both", expand=True)#.place(x=0, y=0, anchor = 'nw')
+
 
         self.keys = []
         self.specialKeys = []
@@ -29,6 +33,8 @@ class TkinterForGames:
         self.start_time = time.time()
         self.fps = 0
         self.deltaTime = 0
+
+    #Implement music in main class
 
     def resizable(self, resizable : bool):
         if isinstance(resizable, bool):
@@ -149,6 +155,14 @@ class Scene:
         if isinstance(object, Object):
             self.objects.append(object)
             object.scene = self
+        else:
+            raise TypeError(f"{object} {type(object)} is not an instance of Object")
+        
+    def removeObject(self,object):
+        if isinstance(object, Object):
+            del self.objects[self.objects.index(object)]
+            object.scene = None
+            del object
         else:
             raise TypeError(f"{object} {type(object)} is not an instance of Object")
     
@@ -485,12 +499,13 @@ class Text(Object):
         self.textSize = size
         self.color = color
         self.ui = ui
+        self.textObject = None
     
     def render(self):
         if self.ui:
-            self.tfg.canvas.create_text(self.pos[0], self.pos[1], text=self.text, anchor="nw", fill=self.color, font=(f'Helvetica {self.textSize}'))
+            self.textObject = self.tfg.canvas.create_text(self.pos[0], self.pos[1], text=self.text, anchor="nw", fill=self.color, font=(f'Helvetica {self.textSize}'))
         else:
-            self.tfg.canvas.create_text(self.pos[0]-self.tfg.mainCamera.pos.x, self.pos[1]-self.tfg.mainCamera.pos.y, text=self.text, anchor="nw", fill=self.color, font=(f'Helvetica {self.textSize}'))
+            self.textObject = self.tfg.canvas.create_text(self.pos[0]-self.tfg.mainCamera.pos.x, self.pos[1]-self.tfg.mainCamera.pos.y, text=self.text, anchor="nw", fill=self.color, font=(f'Helvetica {self.textSize}'))
         if self.hitbox != None:
             self.hitbox.x = self.pos[0]-self.tfg.mainCamera.pos.x
             self.hitbox.y = self.pos[1]-self.tfg.mainCamera.pos.y
@@ -507,7 +522,6 @@ class Rect(Object):
         self.tfg = tfg
         self.outline = outline
         self.ui = ui
-        self.pos = pos
     
     def setPosition(self, x=None, y=None, width=None, height=None):
         if x == None:
@@ -523,9 +537,8 @@ class Rect(Object):
     
     def changePosition(self, x=0, y=0, width=0, height=0):
         self.pos = (self.pos[0]+x,self.pos[1]+y,self.pos[2]+width,self.pos[3]+height)
-        if self.hitbox != None:
-            self.hitbox.x = self.pos[0]-self.tfg.mainCamera.pos.x
-            self.hitbox.y = self.pos[1]-self.tfg.mainCamera.pos.y
+        self.hitbox.x = self.pos[0]-self.tfg.mainCamera.pos.x
+        self.hitbox.y = self.pos[1]-self.tfg.mainCamera.pos.y
         return self
     
     def getPosition(self):
@@ -585,7 +598,7 @@ class Image(Object):
         #tfg.tkinter.Label(tfg.window,image=img).pack()#.grid(column=0, row=0)#place(relx=self.pos[0], rely=self.pos[1], anchor = 'nw')
 
     def resize(self, width, height):
-        self.img2 = self.img2.resize((width,height), PILImage.ANTIALIAS)
+        self.img2 = self.img2.resize((width,height), PILImage.NEAREST)
         self.img = ImageTk.PhotoImage(self.img2)
 
     def render(self):
@@ -690,3 +703,19 @@ class Data:
                         print(f"datatype {datatype} not supported")
                 
                 return comb
+
+class Sound:
+    def __init__(self, filename:str):
+        self.filename = filename
+        
+        self.soundInstance = simpleaudio.WaveObject.from_wave_file(self.filename)
+        
+    def play(self):
+        self.soundInstance.play()
+
+    def stop(self):
+        if self.isPlaying:
+            self.musicInstance.stop()
+
+    def isPlaying(self):
+        return self.musicInstance.is_playing()
